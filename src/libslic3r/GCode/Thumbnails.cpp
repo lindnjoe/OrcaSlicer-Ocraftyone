@@ -142,13 +142,20 @@ std::unique_ptr<CompressedImageBuffer> compress_thumbnail_btt_tft(const Thumbnai
             px.b = rgba_pixels[ypos * row_size + xpos + 2];
             px.a = rgba_pixels[ypos * row_size + xpos + 3];
 
-            // calculate values for RGB with alpha
-            const uint8_t rv = ((px.a * px.r) / 255);
-            const uint8_t gv = ((px.a * px.g) / 255);
-            const uint8_t bv = ((px.a * px.b) / 255);
+            // implementation of premultiply function of qt/qtbase (https://github.com/qt/qtbase/blob/dev/src/gui/painting/qrgb.h#L45)
+            unsigned int argb = ((px.a & 0xffu) << 24) | ((px.r & 0xffu) << 16) | ((px.g & 0xffu) << 8) | (px.b & 0xffu); // create ARGB value from pixels #AARRGGBB
+            unsigned int t = (argb & 0xff00ff) * px.a; // get red and blue and multiply by alpha value
+            t = (t + ((t >> 8) & 0xff00ff)  + 0x800080) >> 8;
+            t &= 0xff00ff;
 
-            // convert the RGB values to RGB565 hex that is right justified (same algorithm BTT firmware uses)
-            auto color_565 = rjust(get_hex(((rv >> 3) << 11) | ((gv >> 2) << 5) | (bv >> 3)), 4, '0');
+            argb = ((argb >> 8) & 0xff) * px.a; // get green and multiply by alpha value
+            argb = (argb + ((argb >> 8) & 0xff) + 0x80);
+            argb &= 0xff00;
+
+            unsigned int result = argb | t | (px.a << 24);
+
+            // convert the RGB values to RGB565 hex that is right justified
+            auto color_565 = rjust(get_hex(((result & 0x00F80000) >> 8 ) | ((result & 0x0000FC00) >> 5 ) | ((result & 0x000000F8) >> 3 )), 4, '0');
 
             //BTT original converter specifies these values should be '0000'
             if (color_565 == "0020" || color_565 == "0841" || color_565 == "0861")
