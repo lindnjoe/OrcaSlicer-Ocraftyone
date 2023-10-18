@@ -26,7 +26,7 @@ struct CompressedImageBuffer
 };
 
 std::string get_hex(const unsigned int input);
-std::string rjust(std::string input, unsigned int width, char fill_char);
+std::string rjust(const std::string& input, unsigned int width, char fill_char);
 std::unique_ptr<CompressedImageBuffer> compress_thumbnail(const ThumbnailData &data, GCodeThumbnailsFormat format);
 
 template<typename WriteToOutput, typename ThrowIfCanceledCallback>

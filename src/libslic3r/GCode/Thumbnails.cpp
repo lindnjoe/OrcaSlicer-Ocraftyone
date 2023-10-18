@@ -177,7 +177,7 @@ std::string get_hex(const unsigned int input) {
     return stream.str();
 }
 
-std::string rjust(std::string input, unsigned int width, char fill_char) {
+std::string rjust(const std::string& input, unsigned int width, char fill_char) {
     std::stringstream stream;
     stream.fill(fill_char);
     stream.width(width);
