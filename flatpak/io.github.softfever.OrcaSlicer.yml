@@ -253,6 +253,7 @@ modules:
       - type: git
         url: https://github.com/SoftFever/Orca-deps-wxWidgets
         branch: master
+        disable-submodules: true
         path: deps/build/dep_wxWidgets-prefix/dep_wxWidgets
 
   - name: OrcaSlicer 
