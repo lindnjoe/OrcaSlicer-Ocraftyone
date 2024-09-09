@@ -70,7 +70,7 @@ jobs:
     # maybe i'm too dumb and fucked up to do CI. OH WELL :D -ppd
     - name: "Remove unneeded stuff to free disk space"
       run:
-        sudo rm -rf /usr/share/dotnet /opt/ghc "/usr/local/share/boost" "$AGENT_TOOLSDIRECTORY" /usr/share/licenses /usr/share/locale /var/lib/flatpak/repo/objects /__t
+        sudo rm -rf /usr/share/dotnet /opt/ghc "/usr/local/share/boost" "$AGENT_TOOLSDIRECTORY" /usr/share/licenses /usr/share/locale /var/lib/flatpak/repo/objects
 
     - name: "Get current disk usage"
       run: df -h /
