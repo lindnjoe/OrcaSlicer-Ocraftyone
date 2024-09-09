@@ -315,10 +315,10 @@ if (NOT TIFF_FOUND)
     set(TIFF_PKG "dep_TIFF")
 endif()
 
-# flatpak builds wxwidgets separately 
+include(wxWidgets/wxWidgets.cmake)
+# flatpak builds wxwidgets separatelyj
 set(WXWIDGETS_PKG "")
 if (NOT FLATPAK)
-    include(wxWidgets/wxWidgets.cmake)
     set(WXWIDGETS_PKG "dep_wxWidgets")
 endif()
 
