@@ -130,6 +130,7 @@ modules:
     build-commands:
       # start build
       - |
+        rm -rf .git
         cd deps
         cmake . -B build \
           -GNinja \
@@ -151,13 +152,6 @@ modules:
       - /app/lib/cmake
 
     sources:
-      # -
-      # Section bellow fetches all OrcaSlicer dependencies before the build process and stores them in external-packages/*/* .
-      # -DDEP_DOWNLOAD_DIR is set in the build process which has to match with dest.
-      #
-      # NOTE: The url, dest folder name and sha256 must match from OrcaSlicer's cmake scripts and folder names in OrcaSlicer/deps/
-      # -
-
       # OrcaSlicer Source Archive
       - type: dir
         path: ../
@@ -166,6 +160,7 @@ modules:
     buildsystem: simple
     build-commands:
       - |
+        rm -rf .git
         mkdir -p build && cd build
         CXXFLAGS=-std=gnu++20 cmake ../ \
           -DSLIC3R_PCH=OFF \
