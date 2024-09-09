@@ -68,7 +68,7 @@ jobs:
       options: --privileged
     steps:
     - name: "Get current disk usage"
-      run: df -h
+      run: du -h /
     # maybe i'm too dumb and fucked up to do CI. OH WELL :D -ppd
     - name: "Remove unneeded stuff to free disk space"
       run:
@@ -82,4 +82,4 @@ jobs:
         cache: false
 
     - name: "Get current disk usage"
-      run: df -h
+      run: du -h /
