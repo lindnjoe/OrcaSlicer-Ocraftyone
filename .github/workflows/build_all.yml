@@ -72,6 +72,8 @@ jobs:
       run:
         sudo rm -rf /usr/share/dotnet /opt/ghc "/usr/local/share/boost" "$AGENT_TOOLSDIRECTORY" /usr/share/licenses /usr/share/locale
 
+    - uses: actions/checkout@v4
+
     - name: "Get current disk usage"
       if: always()
       run: |
@@ -83,8 +85,6 @@ jobs:
         sudo du -hd 1 ~
         echo Disk Usage for ${{ github.workspace }}
         sudo du -hd 1 ${{ github.workspace }}
-
-    - uses: actions/checkout@v4
 
     - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
       with:
