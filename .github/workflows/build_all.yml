@@ -101,5 +101,5 @@ jobs:
         sudo du -hd 1 /opt
         echo Disk Usage for ~
         sudo du -hd 1 ~
-        echo Disk Usage for ${{ github.workspace }}
-        sudo du -hd 1 ${{ github.workspace }}
+        echo Disk Usage for /run
+        sudo du -hd 2 /run
