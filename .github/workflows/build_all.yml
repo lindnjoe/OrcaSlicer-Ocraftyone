@@ -75,8 +75,10 @@ jobs:
     - name: "Get current disk usage"
       if: always()
       run: |
-        echo Disk Usage for /
-        sudo du -hd 1 /
+        echo Disk Usage for /usr
+        sudo du -hd 1 /usr
+        echo Disk Usage for /opt
+        sudo du -hd 1 /opt
         echo Disk Usage for ~
         sudo du -hd 1 ~
         echo Disk Usage for ${{ github.workspace }}
@@ -94,8 +96,10 @@ jobs:
     - name: "Get current disk usage"
       if: always()
       run: |
-        echo Disk Usage for /
-        sudo du -hd 1 /
+        echo Disk Usage for /usr
+        sudo du -hd 1 /usr
+        echo Disk Usage for /opt
+        sudo du -hd 1 /opt
         echo Disk Usage for ~
         sudo du -hd 1 ~
         echo Disk Usage for ${{ github.workspace }}
