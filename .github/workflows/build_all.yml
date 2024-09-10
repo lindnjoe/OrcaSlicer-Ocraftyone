@@ -76,11 +76,11 @@ jobs:
       if: always()
       run: |
         echo Disk Usage for /
-        du -hd 1 /
+        sudo du -hd 1 /
         echo Disk Usage for ~
-        du -hd 1 ~
+        sudo du -hd 1 ~
         echo Disk Usage for ${{ github.workspace }}
-        du -hd 1 ${{ github.workspace }}
+        sudo du -hd 1 ${{ github.workspace }}
 
     - uses: actions/checkout@v4
 
@@ -95,8 +95,8 @@ jobs:
       if: always()
       run: |
         echo Disk Usage for /
-        du -hd 1 /
+        sudo du -hd 1 /
         echo Disk Usage for ~
-        du -hd 1 ~
+        sudo du -hd 1 ~
         echo Disk Usage for ${{ github.workspace }}
-        du -hd 1 ${{ github.workspace }}
+        sudo du -hd 1 ${{ github.workspace }}
