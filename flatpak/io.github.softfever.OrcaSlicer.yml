@@ -130,9 +130,7 @@ modules:
     build-commands:
       # start build
       - |
-        rm -rf .git
-        cd deps
-        cmake . -B build \
+        cmake -B deps/build -S deps \
           -GNinja \
           -DDEP_WX_GTK3=ON \
           -DDEP_DOWNLOAD_DIR=/run/build/orca_deps/external-packages \
