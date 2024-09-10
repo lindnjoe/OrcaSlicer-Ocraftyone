@@ -139,8 +139,8 @@ modules:
           -DCMAKE_INSTALL_LIBDIR=/app/lib \
           -DFLATPAK=ON \
           -DCMAKE_INSTALL_PREFIX=/app
-        cmake --build build --target dep_wxWidgets
-        cmake --build build
+        cmake --build deps/build --target dep_wxWidgets
+        cmake --build deps/build
 
     cleanup:
       - /app/include
