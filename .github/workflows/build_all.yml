@@ -73,7 +73,14 @@ jobs:
         sudo rm -rf /usr/share/dotnet /opt/ghc "/usr/local/share/boost" "$AGENT_TOOLSDIRECTORY" /usr/share/licenses /usr/share/locale
 
     - name: "Get current disk usage"
-      run: df -h /
+      if: always()
+      run: |
+        echo Disk Usage for /
+        du -hd 1 /
+        echo Disk Usage for ~
+        du -hd 1 ~
+        echo Disk Usage for ${{ github.workspace }}
+        du -hd 1 ${{ github.workspace }}
 
     - uses: actions/checkout@v4
 
@@ -85,4 +92,11 @@ jobs:
         cache: false
 
     - name: "Get current disk usage"
-      run: df -h /
+      if: always()
+      run: |
+        echo Disk Usage for /
+        du -hd 1 /
+        echo Disk Usage for ~
+        du -hd 1 ~
+        echo Disk Usage for ${{ github.workspace }}
+        du -hd 1 ${{ github.workspace }}
