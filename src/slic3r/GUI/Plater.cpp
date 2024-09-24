@@ -12591,12 +12591,9 @@ int Plater::send_gcode(int plate_idx, Export3mfProgressFn proFn)
 {
     int result = 0;
     /* generate 3mf */
-    if (plate_idx == PLATE_CURRENT_IDX) {
-        p->m_print_job_data.plate_idx = get_partplate_list().get_curr_plate_index();
-    }
-    else {
-        p->m_print_job_data.plate_idx = plate_idx;
-    }
+    if (plate_idx == PLATE_CURRENT_IDX)
+        plate_idx = get_partplate_list().get_curr_plate_index();
+    p->m_print_job_data.plate_idx = plate_idx;
 
     PartPlate* plate = get_partplate_list().get_curr_plate();
     try {
