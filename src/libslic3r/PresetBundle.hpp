@@ -116,6 +116,7 @@ public:
     void            set_num_filaments(unsigned int n, std::vector<std::string> new_colors);
     void            set_num_filaments(unsigned int n, std::string new_col = "");
     unsigned int sync_ams_list(unsigned int & unknowns);
+    std::string find_filament_preset_name_by_spoolman_id(unsigned int spool_id) const;
     //BBS: check whether this is the only edited filament
     bool is_the_only_edited_filament(unsigned int filament_index);
 

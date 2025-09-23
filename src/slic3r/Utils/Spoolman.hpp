@@ -124,6 +124,8 @@ public:
         return m_spools;
     }
 
+    std::map<size_t, SpoolmanSpoolShrPtr> get_spools_by_loaded_lane(bool update = false);
+
     SpoolmanSpoolShrPtr get_spoolman_spool_by_id(unsigned int spool_id, bool update = false)
     {
         if (update || !m_initialized)
@@ -220,6 +222,7 @@ public:
     float remaining_length;
     float used_length;
     bool  archived;
+    int   loaded_lane = -1;
 
     SpoolmanFilamentShrPtr m_filament_ptr;
 

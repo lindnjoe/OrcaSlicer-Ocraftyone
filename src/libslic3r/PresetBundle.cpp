@@ -1939,6 +1939,21 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
     return filament_presets.size();
 }
 
+std::string PresetBundle::find_filament_preset_name_by_spoolman_id(unsigned int spool_id) const
+{
+    if (spool_id == 0)
+        return {};
+
+    for (const Preset& preset : filaments.get_presets()) {
+        if (!preset.is_user())
+            continue;
+        if (preset.config.opt_int("spoolman_spool_id", 0) == static_cast<int>(spool_id))
+            return preset.name;
+    }
+
+    return {};
+}
+
 void PresetBundle::set_calibrate_printer(std::string name)
 {
     if (name.empty()) {

@@ -28,6 +28,7 @@
 #include "libslic3r/calib.hpp"
 #include "libslic3r/CutUtils.hpp"
 #include "libslic3r/FlushVolCalc.hpp"
+#include <Spoolman.hpp>
 
 #define FILAMENT_SYSTEM_COLORS_NUM      16
 
@@ -207,6 +208,8 @@ private:
     ComboBox* m_bed_type_list = nullptr;
     ScalableButton* connection_btn = nullptr;
     ScalableButton* ams_btn = nullptr;
+
+    bool sync_spoolman_loaded_lanes(const std::map<size_t, SpoolmanSpoolShrPtr>& lane_spools);
 };
 
 class Plater: public wxPanel

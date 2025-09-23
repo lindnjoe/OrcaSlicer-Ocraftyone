@@ -1771,6 +1771,94 @@ void Sidebar::load_ams_list(std::string const &device, MachineObject* obj)
         c->update();
 }
 
+bool Sidebar::sync_spoolman_loaded_lanes(const std::map<size_t, SpoolmanSpoolShrPtr>& lane_spools)
+{
+    if (lane_spools.empty())
+        return false;
+
+    PresetBundle*                 preset_bundle    = wxGetApp().preset_bundle;
+    std::vector<std::string>&     filament_presets = preset_bundle->filament_presets;
+    size_t                        desired_count    = filament_presets.size();
+
+    for (const auto& [lane, spool] : lane_spools)
+        desired_count = std::max(desired_count, lane + 1);
+
+    if (desired_count > filament_presets.size())
+        preset_bundle->set_num_filaments(desired_count);
+
+    ConfigOptionStrings* color_opt = preset_bundle->project_config.option<ConfigOptionStrings>("filament_colour");
+    color_opt->resize(preset_bundle->filament_presets.size());
+
+    bool                  synced_any      = false;
+    std::vector<unsigned> synced_spool_ids;
+    std::vector<wxString> missing_spools;
+
+    for (const auto& [lane, spool] : lane_spools) {
+        if (!spool || spool->archived)
+            continue;
+
+        std::string preset_name = preset_bundle->find_filament_preset_name_by_spoolman_id(spool->id);
+        if (preset_name.empty()) {
+            wxString spool_label = from_u8(spool->get_preset_name());
+            wxString lane_label  = wxString::Format(_L("Lane %d"), static_cast<int>(lane) + 1);
+            missing_spools.emplace_back(lane_label + ": " + spool_label);
+            continue;
+        }
+
+        preset_bundle->set_filament_preset(lane, preset_name);
+        if (lane < color_opt->values.size() && !spool->m_filament_ptr->color.empty())
+            color_opt->values[lane] = spool->m_filament_ptr->color;
+        synced_any = true;
+        synced_spool_ids.emplace_back(spool->id);
+    }
+
+    if (!synced_any) {
+        wxString msg;
+        if (!missing_spools.empty()) {
+            msg = _L("No matching Orca Slicer presets were found for the loaded Spoolman spools:") + "\n";
+            for (const auto& line : missing_spools)
+                msg += line + "\n";
+            msg += _L("Import the spools before synchronizing.");
+        } else {
+            msg = _L("No active Spoolman spools are available for synchronization.");
+        }
+        MessageDialog dlg(this, msg, _L("Sync filaments with AMS"), wxOK);
+        dlg.ShowModal();
+        return true;
+    }
+
+    preset_bundle->update_multi_material_filament_presets();
+
+    wxGetApp().plater()->on_filaments_change(preset_bundle->filament_presets.size());
+    for (auto& combo : p->combos_filament)
+        combo->update();
+
+    if (!preset_bundle->filament_presets.empty())
+        wxGetApp().get_tab(Preset::TYPE_FILAMENT)->select_preset(preset_bundle->filament_presets[0]);
+
+    wxGetApp().preset_bundle->export_selections(*wxGetApp().app_config);
+    update_dynamic_filament_list();
+    p->m_panel_filament_content->SetMaxSize({-1, -1});
+    wxGetApp().plater()->update_project_dirty_from_presets();
+
+    for (size_t idx = 0; idx < p->combos_filament.size(); ++idx)
+        auto_calc_flushing_volumes(idx);
+
+    if (!synced_spool_ids.empty())
+        Spoolman::update_specific_spool_statistics(synced_spool_ids);
+
+    if (!missing_spools.empty()) {
+        wxString msg = _L("The following Spoolman spools could not be synchronized:") + "\n";
+        for (const auto& line : missing_spools)
+            msg += line + "\n";
+        msg += _L("Import the spools before synchronizing.");
+        MessageDialog dlg(this, msg, _L("Sync filaments with AMS"), wxOK);
+        dlg.ShowModal();
+    }
+
+    return true;
+}
+
 void Sidebar::sync_ams_list()
 {
     // Force load ams list
@@ -1779,6 +1867,22 @@ void Sidebar::sync_ams_list()
         GUI::wxGetApp().sidebar().load_ams_list(obj->dev_id, obj);
 
     auto & list = wxGetApp().preset_bundle->filament_ams_list;
+
+    if (Spoolman::is_enabled() && Spoolman::is_server_valid()) {
+        auto spoolman = Spoolman::get_instance();
+        auto lanes    = spoolman->get_spools_by_loaded_lane(true);
+        if (!lanes.empty()) {
+            if (sync_spoolman_loaded_lanes(lanes))
+                return;
+        } else if (list.empty()) {
+            MessageDialog dlg(this,
+                _L("No loaded Spoolman spools were found to synchronize."),
+                _L("Sync filaments with AMS"), wxOK);
+            dlg.ShowModal();
+            return;
+        }
+    }
+
     if (list.empty()) {
         MessageDialog dlg(this,
             _L("No AMS filaments. Please select a printer in 'Device' page to load AMS info."),

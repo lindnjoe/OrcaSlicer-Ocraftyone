@@ -2,6 +2,7 @@
 #include <slic3r/GUI/MainFrame.hpp>
 #include <utility>
 #include <slic3r/GUI/CreatePresetsDialog.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/regex.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include "Spoolman.hpp"
@@ -495,6 +496,47 @@ void SpoolmanSpool::update_from_json(pt::ptree json_data)
     remaining_length = get_opt<float>(json_data, "remaining_length");
     used_length      = get_opt<float>(json_data, "used_length");
     archived         = get_opt<bool>(json_data, "archived");
+    loaded_lane      = -1;
+
+    if (auto lane_opt = json_data.get_optional<int>("extra.loaded_lane")) {
+        loaded_lane = *lane_opt;
+    } else {
+        std::string lane_value = get_opt<string>(json_data, "extra.loaded_lane");
+        if (lane_value.empty())
+            lane_value = get_opt<string>(json_data, "loaded_lane");
+
+        if (!lane_value.empty()) {
+            boost::algorithm::trim(lane_value);
+            if (lane_value.size() >= 2 &&
+                ((lane_value.front() == '"' && lane_value.back() == '"') ||
+                 (lane_value.front() == '\'' && lane_value.back() == '\'')))
+                lane_value = lane_value.substr(1, lane_value.size() - 2);
+
+            boost::algorithm::trim(lane_value);
+            if (boost::algorithm::istarts_with(lane_value, "lane"))
+                lane_value.erase(0, 4);
+
+            try {
+                loaded_lane = std::stoi(lane_value);
+            } catch (const std::exception&) {
+                loaded_lane = -1;
+            }
+        }
+    }
+}
+
+std::map<size_t, SpoolmanSpoolShrPtr> Spoolman::get_spools_by_loaded_lane(bool update)
+{
+    std::map<size_t, SpoolmanSpoolShrPtr> lanes;
+
+    const auto& spools = get_spoolman_spools(update);
+    for (const auto& [spool_id, spool] : spools) {
+        if (!spool || spool->archived || spool->loaded_lane < 0)
+            continue;
+        lanes.emplace(static_cast<size_t>(spool->loaded_lane), spool);
+    }
+
+    return lanes;
 }
 
 } // namespace Slic3r
