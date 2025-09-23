@@ -44,6 +44,7 @@ jobs:
           path: ${{ steps.set_outputs.outputs.cache-path }}
           key: ${{ steps.set_outputs.outputs.cache-key }}
           lookup-only: true
+          fail-on-cache-miss: false
         
   build_deps: # call next step
     name: Build Deps
@@ -57,3 +58,4 @@ jobs:
       arch: ${{ inputs.arch }}
       build-deps-only: ${{ inputs.build-deps-only }}
     secrets: inherit
+
