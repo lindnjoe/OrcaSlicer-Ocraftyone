@@ -3,6 +3,7 @@
 
 #include <boost/property_tree/ptree.hpp>
 #include <map>
+#include <optional>
 #include <libslic3r/Config.hpp>
 
 namespace pt = boost::property_tree;
@@ -17,6 +18,8 @@ class SpoolmanSpool;
 typedef std::shared_ptr<SpoolmanVendor>   SpoolmanVendorShrPtr;
 typedef std::shared_ptr<SpoolmanFilament> SpoolmanFilamentShrPtr;
 typedef std::shared_ptr<SpoolmanSpool>    SpoolmanSpoolShrPtr;
+
+using SpoolmanLaneMap = std::map<unsigned int, SpoolmanSpoolShrPtr>;
 
 struct SpoolmanResult
 {
@@ -131,6 +134,9 @@ public:
         return m_spools[spool_id];
     }
 
+    SpoolmanLaneMap get_spools_by_loaded_lane(bool update = false);
+    const Preset*   find_preset_for_spool(int spool_id) const;
+
     void clear()
     {
         m_spools.clear();
@@ -220,6 +226,9 @@ public:
     float remaining_length;
     float used_length;
     bool  archived;
+
+    std::optional<unsigned int> loaded_lane_index;
+    std::string                 loaded_lane_label;
 
     SpoolmanFilamentShrPtr m_filament_ptr;
 
