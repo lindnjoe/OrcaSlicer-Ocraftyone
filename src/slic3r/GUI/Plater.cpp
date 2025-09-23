@@ -1771,8 +1771,162 @@ void Sidebar::load_ams_list(std::string const &device, MachineObject* obj)
         c->update();
 }
 
+bool Sidebar::sync_spoolman_loaded_lanes()
+{
+    using Slic3r::Spoolman;
+
+    if (!Spoolman::is_enabled())
+        return false;
+
+    auto spoolman = Spoolman::get_instance();
+    auto lane_map = spoolman->get_spools_by_loaded_lane(true);
+    if (lane_map.empty())
+        return false;
+
+    std::map<int, DynamicPrintConfig> lane_configs;
+    std::vector<std::string>          missing_presets;
+
+    for (const auto& [lane, spool] : lane_map) {
+        if (!spool)
+            continue;
+
+        const Preset* preset = spoolman->find_preset_for_spool(spool->id);
+        if (!preset) {
+            std::string label = spool->get_preset_name();
+            if (!spool->loaded_lane_label.empty())
+                label += " (" + spool->loaded_lane_label + ")";
+            else
+                label += " (lane " + std::to_string(lane) + ")";
+            missing_presets.push_back(std::move(label));
+            continue;
+        }
+
+        DynamicPrintConfig config;
+        config.set_key_value("filament_id", new ConfigOptionStrings({preset->filament_id}));
+
+        std::string color = spool->m_filament_ptr ? spool->m_filament_ptr->color : std::string();
+        if (color.empty())
+            color = preset->config.opt_string("default_filament_colour", 0u);
+        if (color.empty())
+            color = preset->config.opt_string("filament_colour", 0u);
+        if (color.empty())
+            color = "#FFFFFF";
+
+        config.set_key_value("filament_colour", new ConfigOptionStrings({color}));
+        std::string material = spool->m_filament_ptr ? spool->m_filament_ptr->material : std::string();
+        if (material.empty())
+            material = preset->config.opt_string("filament_type", 0u);
+        config.set_key_value("filament_type", new ConfigOptionStrings({material}));
+
+        std::string tray_name = spool->loaded_lane_label;
+        if (tray_name.empty())
+            tray_name = "Lane " + std::to_string(lane + 1);
+        config.set_key_value("tray_name", new ConfigOptionStrings({tray_name}));
+        config.set_key_value("tag_uid", new ConfigOptionStrings({std::to_string(spool->id)}));
+        config.set_key_value("filament_exist", new ConfigOptionBools({true}));
+        config.set_key_value("filament_changed", new ConfigOptionBool{true});
+        config.set_key_value("filament_multi_colors", new ConfigOptionStrings{});
+
+        lane_configs.emplace(static_cast<int>(lane), std::move(config));
+    }
+
+    if (!missing_presets.empty()) {
+        auto details = boost::algorithm::join(missing_presets, "\n");
+        MessageDialog dlg(this,
+            _L("The following Spoolman spools could not be matched to presets and will be skipped:\n") +
+                wxString::FromUTF8(details.c_str()),
+            _L("Sync filaments with Spoolman"),
+            wxOK);
+        dlg.ShowModal();
+    }
+
+    if (lane_configs.empty()) {
+        MessageDialog dlg(this,
+            _L("Unable to map any Spoolman spools to filament presets. Please import the spools first."),
+            _L("Sync filaments with Spoolman"),
+            wxOK);
+        dlg.ShowModal();
+        return true;
+    }
+
+    auto* preset_bundle = wxGetApp().preset_bundle;
+    preset_bundle->filament_ams_list = lane_configs;
+    p->ams_list_device               = "spoolman";
+
+    const int highest_lane = lane_configs.rbegin()->first;
+    std::vector<std::string> lane_ids(static_cast<size_t>(highest_lane) + 1);
+    for (auto& entry : lane_configs) {
+        auto& ams         = entry.second;
+        auto  filament_id = ams.opt_string("filament_id", 0u);
+        ams.set_key_value("filament_changed", new ConfigOptionBool{true});
+        const auto lane_index = static_cast<size_t>(entry.first);
+        if (lane_index < lane_ids.size())
+            lane_ids[lane_index] = filament_id;
+    }
+
+    std::vector<std::string> color_before_sync;
+    std::vector<bool>   is_support_before;
+    DynamicPrintConfig& project_config = wxGetApp().preset_bundle->project_config;
+    ConfigOptionStrings* color_opt = project_config.option<ConfigOptionStrings>("filament_colour");
+    for (int i = 0; i < p->combos_filament.size(); ++i) {
+        is_support_before.push_back(is_support_filament(i));
+        color_before_sync.push_back(color_opt->values[i]);
+    }
+
+    unsigned int unknowns = 0;
+    auto         n        = preset_bundle->sync_ams_list(unknowns);
+    if (n == 0) {
+        MessageDialog dlg(this,
+            _L("There are no compatible filaments, and sync is not performed."),
+            _L("Sync filaments with Spoolman"),
+            wxOK);
+        dlg.ShowModal();
+        return true;
+    }
+
+    const std::string ams_filament_ids = boost::algorithm::join(lane_ids, ",");
+    wxGetApp().app_config->set("ams_filament_ids", p->ams_list_device, ams_filament_ids);
+
+    if (unknowns > 0) {
+        MessageDialog dlg(this,
+            _L("There are some unknown filaments mapped to generic preset. Please update Orca Slicer or restart Orca Slicer to check if there is an update to system presets."),
+            _L("Sync filaments with Spoolman"),
+            wxOK);
+        dlg.ShowModal();
+    }
+
+    wxGetApp().plater()->on_filaments_change(n);
+    for (auto& c : p->combos_filament)
+        c->update();
+    wxGetApp().get_tab(Preset::TYPE_FILAMENT)->select_preset(wxGetApp().preset_bundle->filament_presets[0]);
+    wxGetApp().preset_bundle->export_selections(*wxGetApp().app_config);
+    update_dynamic_filament_list();
+    p->m_panel_filament_content->SetMaxSize({-1, -1});
+
+    ConfigOptionStrings* color_opt_after = project_config.option<ConfigOptionStrings>("filament_colour");
+    for (int i = 0; i < p->combos_filament.size(); ++i) {
+        if (i >= color_before_sync.size()) {
+            auto_calc_flushing_volumes(i);
+        } else {
+            if (color_before_sync[i] != color_opt_after->values[i]) {
+                auto_calc_flushing_volumes(i);
+            } else {
+                bool flag = is_support_filament(i);
+                if (flag != is_support_before[i])
+                    auto_calc_flushing_volumes(i);
+            }
+        }
+    }
+
+    Layout();
+    return true;
+}
+
 void Sidebar::sync_ams_list()
 {
+    if (sync_spoolman_loaded_lanes())
+        return;
+
     // Force load ams list
     auto obj = wxGetApp().getDeviceManager()->get_selected_machine();
     if (obj)
