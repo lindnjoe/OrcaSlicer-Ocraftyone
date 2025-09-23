@@ -1814,7 +1814,18 @@ bool Sidebar::sync_spoolman_loaded_lanes()
 
         config.set_key_value("filament_colour", new ConfigOptionStrings({color}));
         std::string material = spool->m_filament_ptr ? spool->m_filament_ptr->material : std::string();
+
+        if (material.empty())
+            material = preset->config.opt_string("filament_type", 0u);
         config.set_key_value("filament_type", new ConfigOptionStrings({material}));
+
+        std::string tray_name = spool->loaded_lane_label;
+        if (tray_name.empty())
+            tray_name = "Lane " + std::to_string(lane + 1);
+        config.set_key_value("tray_name", new ConfigOptionStrings({tray_name}));
+        config.set_key_value("tag_uid", new ConfigOptionStrings({std::to_string(spool->id)}));
+        config.set_key_value("filament_exist", new ConfigOptionBools({true}));
+
         config.set_key_value("filament_changed", new ConfigOptionBool{true});
         config.set_key_value("filament_multi_colors", new ConfigOptionStrings{});
 
@@ -1844,17 +1855,17 @@ bool Sidebar::sync_spoolman_loaded_lanes()
     preset_bundle->filament_ams_list = lane_configs;
     p->ams_list_device               = "spoolman";
 
-    std::string ams_filament_ids = wxGetApp().app_config->get("ams_filament_ids", p->ams_list_device);
-    std::vector<std::string> list2;
-    if (!ams_filament_ids.empty())
-        boost::algorithm::split(list2, ams_filament_ids, boost::algorithm::is_any_of(","));
-    list2.resize(lane_configs.size());
-    auto iter = lane_configs.begin();
-    for (size_t i = 0; i < lane_configs.size(); ++i, ++iter) {
-        auto& ams        = iter->second;
+
+    const int highest_lane = lane_configs.rbegin()->first;
+    std::vector<std::string> lane_ids(static_cast<size_t>(highest_lane) + 1);
+    for (auto& entry : lane_configs) {
+        auto& ams         = entry.second;
         auto  filament_id = ams.opt_string("filament_id", 0u);
         ams.set_key_value("filament_changed", new ConfigOptionBool{true});
-        list2[i] = filament_id;
+        const auto lane_index = static_cast<size_t>(entry.first);
+        if (lane_index < lane_ids.size())
+            lane_ids[lane_index] = filament_id;
+
     }
 
     std::vector<std::string> color_before_sync;
@@ -1877,7 +1888,9 @@ bool Sidebar::sync_spoolman_loaded_lanes()
         return true;
     }
 
-    ams_filament_ids = boost::algorithm::join(list2, ",");
+
+    const std::string ams_filament_ids = boost::algorithm::join(lane_ids, ",");
+
     wxGetApp().app_config->set("ams_filament_ids", p->ams_list_device, ams_filament_ids);
 
     if (unknowns > 0) {
