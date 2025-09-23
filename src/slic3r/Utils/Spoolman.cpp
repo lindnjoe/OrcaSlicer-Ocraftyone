@@ -1,7 +1,11 @@
 #include <slic3r/GUI/GUI_App.hpp>
 #include <slic3r/GUI/MainFrame.hpp>
+#include <algorithm>
+#include <cctype>
+#include <iterator>
 #include <utility>
 #include <slic3r/GUI/CreatePresetsDialog.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/regex.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include "Spoolman.hpp"
@@ -208,6 +212,43 @@ bool Spoolman::undo_use_spoolman_spools()
     m_use_undo_buffer.clear();
     m_last_usage_type.clear();
     return true;
+}
+
+SpoolmanLaneMap Spoolman::get_spools_by_loaded_lane(bool update)
+{
+    SpoolmanLaneMap lanes;
+    const auto&     spools = get_spoolman_spools(update);
+
+    for (const auto& [id, spool] : spools) {
+        if (!spool || !spool->loaded_lane_index)
+            continue;
+
+        auto [it, inserted] = lanes.emplace(*spool->loaded_lane_index, spool);
+        if (!inserted) {
+            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": Multiple spools are assigned to lane "
+                                       << *spool->loaded_lane_index << ". Ignoring spool " << id;
+        }
+    }
+
+    return lanes;
+}
+
+const Preset* Spoolman::find_preset_for_spool(int spool_id) const
+{
+    auto* preset_bundle = GUI::wxGetApp().preset_bundle;
+    if (!preset_bundle)
+        return nullptr;
+
+    auto& filaments = preset_bundle->filaments;
+    for (auto it = filaments.begin(); it != filaments.end(); ++it) {
+        const Preset& preset = *it;
+        if (!preset.is_user())
+            continue;
+        if (preset.config.opt_int("spoolman_spool_id", 0) == spool_id)
+            return &preset;
+    }
+
+    return nullptr;
 }
 
 SpoolmanResult Spoolman::create_filament_preset_from_spool(const SpoolmanSpoolShrPtr& spool,
@@ -495,6 +536,32 @@ void SpoolmanSpool::update_from_json(pt::ptree json_data)
     remaining_length = get_opt<float>(json_data, "remaining_length");
     used_length      = get_opt<float>(json_data, "used_length");
     archived         = get_opt<bool>(json_data, "archived");
+
+    loaded_lane_index.reset();
+    loaded_lane_label.clear();
+    if (auto extra = json_data.get_child_optional("extra")) {
+        if (auto lane_opt = extra->get_optional<std::string>("loaded_lane")) {
+            std::string lane = boost::algorithm::trim_copy(*lane_opt);
+            if (!lane.empty() && lane.front() == '\"' && lane.back() == '\"')
+                lane = lane.substr(1, lane.size() - 2);
+
+            loaded_lane_label = lane;
+
+            std::string digits;
+            std::copy_if(lane.begin(), lane.end(), std::back_inserter(digits), [](char ch) {
+                return std::isdigit(static_cast<unsigned char>(ch));
+            });
+
+            if (!digits.empty()) {
+                try {
+                    loaded_lane_index = static_cast<unsigned int>(std::stoul(digits));
+                } catch (...) {
+                    BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": Failed to parse lane information from Spoolman spool "
+                                                << id << " with value '" << lane << "'";
+                }
+            }
+        }
+    }
 }
 
 } // namespace Slic3r
