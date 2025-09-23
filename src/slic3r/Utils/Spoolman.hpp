@@ -3,7 +3,9 @@
 
 #include <boost/property_tree/ptree.hpp>
 #include <map>
+
 #include <memory>
+
 #include <optional>
 #include <libslic3r/Config.hpp>
 

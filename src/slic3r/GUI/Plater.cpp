@@ -1814,6 +1814,7 @@ bool Sidebar::sync_spoolman_loaded_lanes()
 
         config.set_key_value("filament_colour", new ConfigOptionStrings({color}));
         std::string material = spool->m_filament_ptr ? spool->m_filament_ptr->material : std::string();
+
         if (material.empty())
             material = preset->config.opt_string("filament_type", 0u);
         config.set_key_value("filament_type", new ConfigOptionStrings({material}));
@@ -1824,6 +1825,7 @@ bool Sidebar::sync_spoolman_loaded_lanes()
         config.set_key_value("tray_name", new ConfigOptionStrings({tray_name}));
         config.set_key_value("tag_uid", new ConfigOptionStrings({std::to_string(spool->id)}));
         config.set_key_value("filament_exist", new ConfigOptionBools({true}));
+
         config.set_key_value("filament_changed", new ConfigOptionBool{true});
         config.set_key_value("filament_multi_colors", new ConfigOptionStrings{});
 
@@ -1853,6 +1855,7 @@ bool Sidebar::sync_spoolman_loaded_lanes()
     preset_bundle->filament_ams_list = lane_configs;
     p->ams_list_device               = "spoolman";
 
+
     const int highest_lane = lane_configs.rbegin()->first;
     std::vector<std::string> lane_ids(static_cast<size_t>(highest_lane) + 1);
     for (auto& entry : lane_configs) {
@@ -1862,6 +1865,7 @@ bool Sidebar::sync_spoolman_loaded_lanes()
         const auto lane_index = static_cast<size_t>(entry.first);
         if (lane_index < lane_ids.size())
             lane_ids[lane_index] = filament_id;
+
     }
 
     std::vector<std::string> color_before_sync;
@@ -1884,7 +1888,9 @@ bool Sidebar::sync_spoolman_loaded_lanes()
         return true;
     }
 
+
     const std::string ams_filament_ids = boost::algorithm::join(lane_ids, ",");
+
     wxGetApp().app_config->set("ams_filament_ids", p->ams_list_device, ams_filament_ids);
 
     if (unknowns > 0) {
