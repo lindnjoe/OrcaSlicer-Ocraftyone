@@ -1896,8 +1896,19 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
             ams_multi_color_filment.push_back(filament_multi_color);
             continue;
         }
-        auto iter = std::find_if(filaments.begin(), filaments.end(), [this, &filament_id](auto &f) {
-            return f.is_compatible && filaments.get_preset_base(f) == &f && f.filament_id == filament_id; });
+        auto find_preset_by_id = [&](bool user_only) {
+            return std::find_if(filaments.begin(), filaments.end(), [&](auto &f) {
+                if (!f.is_compatible)
+                    return false;
+                if (user_only && !f.is_user())
+                    return false;
+                return f.filament_id == filament_id;
+            });
+        };
+
+        auto iter = find_preset_by_id(true);
+        if (iter == filaments.end())
+            iter = find_preset_by_id(false);
         if (iter == filaments.end()) {
             BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": filament_id %1% not found or system or compatible") % filament_id;
             auto filament_type = ams.opt_string("filament_type", 0u);
