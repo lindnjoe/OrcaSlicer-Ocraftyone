@@ -347,6 +347,7 @@ struct Sidebar::priv
     ScalableButton *  m_bpButton_add_filament;
     ScalableButton *  m_bpButton_del_filament;
     ScalableButton *  m_bpButton_ams_filament;
+    ScalableButton *  m_bpButton_spoolman_filament = nullptr;
     ScalableButton *  m_bpButton_set_filament;
     wxPanel* m_panel_filament_content;
     wxScrolledWindow* m_scrolledWindow_filament_content;
@@ -979,6 +980,15 @@ Sidebar::Sidebar(Plater *parent)
     p->m_bpButton_ams_filament = ams_btn;
 
     bSizer39->Add(ams_btn, 0, wxALIGN_CENTER | wxLEFT, FromDIP(SidebarProps::IconSpacing()));
+    ScalableButton* spoolman_btn = new ScalableButton(p->m_panel_filament_title, wxID_ANY, "spoolman_sync", wxEmptyString, wxDefaultSize,
+                                                      wxDefaultPosition, wxBU_EXACTFIT | wxNO_BORDER, false, 16);
+    spoolman_btn->SetToolTip(_L("Sync filaments with Spoolman"));
+    spoolman_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent& e) { sync_spoolman_loaded_lanes(true); });
+    p->m_bpButton_spoolman_filament = spoolman_btn;
+    const bool spoolman_enabled = Slic3r::Spoolman::is_enabled();
+    spoolman_btn->Show(spoolman_enabled);
+    spoolman_btn->Enable(spoolman_enabled);
+    bSizer39->Add(spoolman_btn, 0, wxALIGN_CENTER | wxLEFT, FromDIP(SidebarProps::IconSpacing()));
     //bSizer39->Add(FromDIP(10), 0, 0, 0, 0 );
 
     ScalableButton* set_btn = new ScalableButton(p->m_panel_filament_title, wxID_ANY, "settings");
@@ -1481,6 +1491,8 @@ void Sidebar::msw_rescale()
     p->m_bpButton_add_filament->msw_rescale();
     p->m_bpButton_del_filament->msw_rescale();
     p->m_bpButton_ams_filament->msw_rescale();
+    if (p->m_bpButton_spoolman_filament)
+        p->m_bpButton_spoolman_filament->msw_rescale();
     p->m_bpButton_set_filament->msw_rescale();
     p->m_flushing_volume_btn->Rescale();
     //BBS
@@ -1552,6 +1564,8 @@ void Sidebar::sys_color_changed()
     p->m_bpButton_add_filament->msw_rescale();
     p->m_bpButton_del_filament->msw_rescale();
     p->m_bpButton_ams_filament->msw_rescale();
+    if (p->m_bpButton_spoolman_filament)
+        p->m_bpButton_spoolman_filament->msw_rescale();
     p->m_bpButton_set_filament->msw_rescale();
     p->m_flushing_volume_btn->Rescale();
 
@@ -1771,17 +1785,37 @@ void Sidebar::load_ams_list(std::string const &device, MachineObject* obj)
         c->update();
 }
 
-bool Sidebar::sync_spoolman_loaded_lanes()
+bool Sidebar::sync_spoolman_loaded_lanes(bool show_feedback)
 {
     using Slic3r::Spoolman;
 
-    if (!Spoolman::is_enabled())
+    if (!Spoolman::is_enabled()) {
+        if (show_feedback) {
+            MessageDialog dlg(this,
+                _L("Enable Spoolman integration in Preferences to sync filaments."),
+                _L("Sync filaments with Spoolman"),
+                wxOK);
+            dlg.ShowModal();
+        }
         return false;
+    }
 
     auto spoolman = Spoolman::get_instance();
     auto lane_map = spoolman->get_spools_by_loaded_lane(true);
-    if (lane_map.empty())
+    if (lane_map.empty()) {
+        if (show_feedback) {
+            if (!Spoolman::is_server_valid()) {
+                show_error(this, _L("Failed to get data from the Spoolman server. Make sure that the port is correct and the server is running."));
+            } else {
+                MessageDialog dlg(this,
+                    _L("No Spoolman spools are assigned to lanes. Assign spools to lanes in Spoolman and try again."),
+                    _L("Sync filaments with Spoolman"),
+                    wxOK);
+                dlg.ShowModal();
+            }
+        }
         return false;
+    }
 
     std::map<int, DynamicPrintConfig> lane_configs;
     std::vector<std::string>          missing_presets;
@@ -1824,6 +1858,7 @@ bool Sidebar::sync_spoolman_loaded_lanes()
             tray_name = "Lane " + std::to_string(lane + 1);
         config.set_key_value("tray_name", new ConfigOptionStrings({tray_name}));
         config.set_key_value("tag_uid", new ConfigOptionStrings({std::to_string(spool->id)}));
+        config.set_key_value("spoolman_spool_id", new ConfigOptionInts({spool->id}));
         config.set_key_value("filament_exist", new ConfigOptionBools({true}));
 
         config.set_key_value("filament_changed", new ConfigOptionBool{true});
@@ -2182,6 +2217,15 @@ void Sidebar::update_ui_from_settings()
 #if 0
     p->object_list->apply_volumes_order();
 #endif
+    if (p->m_bpButton_spoolman_filament) {
+        const bool spoolman_enabled = Slic3r::Spoolman::is_enabled();
+        p->m_bpButton_spoolman_filament->Show(spoolman_enabled);
+        p->m_bpButton_spoolman_filament->Enable(spoolman_enabled);
+        if (auto* sizer = p->m_bpButton_spoolman_filament->GetContainingSizer())
+            sizer->Layout();
+        if (auto* panel_sizer = p->m_panel_filament_title->GetSizer())
+            panel_sizer->Layout();
+    }
 }
 
 bool Sidebar::show_object_list(bool show) const
