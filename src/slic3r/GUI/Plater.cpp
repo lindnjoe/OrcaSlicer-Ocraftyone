@@ -1858,6 +1858,7 @@ bool Sidebar::sync_spoolman_loaded_lanes(bool show_feedback)
             tray_name = "Lane " + std::to_string(lane + 1);
         config.set_key_value("tray_name", new ConfigOptionStrings({tray_name}));
         config.set_key_value("tag_uid", new ConfigOptionStrings({std::to_string(spool->id)}));
+        config.set_key_value("spoolman_spool_id", new ConfigOptionInts({spool->id}));
         config.set_key_value("filament_exist", new ConfigOptionBools({true}));
 
         config.set_key_value("filament_changed", new ConfigOptionBool{true});

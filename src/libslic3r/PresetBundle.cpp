@@ -1896,19 +1896,38 @@ unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
             ams_multi_color_filment.push_back(filament_multi_color);
             continue;
         }
-        auto find_preset_by_id = [&](bool user_only) {
+
+        const int spoolman_spool_id = ams.opt_int("spoolman_spool_id", 0u);
+
+        auto find_preset = [&](bool user_only, bool by_spool_id) {
+
             return std::find_if(filaments.begin(), filaments.end(), [&](auto &f) {
                 if (!f.is_compatible)
                     return false;
                 if (user_only && !f.is_user())
                     return false;
+
+                if (by_spool_id)
+                    return spoolman_spool_id > 0 &&
+                           f.config.opt_int("spoolman_spool_id", 0) == spoolman_spool_id;
+
                 return f.filament_id == filament_id;
             });
         };
 
-        auto iter = find_preset_by_id(true);
-        if (iter == filaments.end())
-            iter = find_preset_by_id(false);
+
+        auto iter = filaments.end();
+        if (spoolman_spool_id > 0) {
+            iter = find_preset(true, true);
+            if (iter == filaments.end())
+                iter = find_preset(false, true);
+        }
+        if (iter == filaments.end()) {
+            iter = find_preset(true, false);
+            if (iter == filaments.end())
+                iter = find_preset(false, false);
+        }
+
         if (iter == filaments.end()) {
             BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": filament_id %1% not found or system or compatible") % filament_id;
             auto filament_type = ams.opt_string("filament_type", 0u);
