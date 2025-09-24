@@ -5,6 +5,7 @@
 #include "Plater.hpp"
 #include "MsgDialog.hpp"
 #include "I18N.hpp"
+#include "Tab.hpp"
 #include "libslic3r/AppConfig.hpp"
 #include <wx/language.h>
 #include <wx/notebook.h>
