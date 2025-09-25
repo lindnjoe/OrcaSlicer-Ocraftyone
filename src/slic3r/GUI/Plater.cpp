@@ -348,7 +348,9 @@ struct Sidebar::priv
     ScalableButton *  m_bpButton_add_filament;
     ScalableButton *  m_bpButton_del_filament;
     ScalableButton *  m_bpButton_ams_filament;
+
     ScalableButton *  m_bpButton_spoolman_import = nullptr;
+
     ScalableButton *  m_bpButton_spoolman_filament = nullptr;
     ScalableButton *  m_bpButton_set_filament;
     wxPanel* m_panel_filament_content;
@@ -982,6 +984,7 @@ Sidebar::Sidebar(Plater *parent)
     p->m_bpButton_ams_filament = ams_btn;
 
     bSizer39->Add(ams_btn, 0, wxALIGN_CENTER | wxLEFT, FromDIP(SidebarProps::IconSpacing()));
+
     const bool spoolman_enabled = Slic3r::Spoolman::is_enabled();
     ScalableButton* spoolman_import_btn = new ScalableButton(p->m_panel_filament_title, wxID_ANY, "spoolman_import", wxEmptyString,
                                                              wxDefaultSize, wxDefaultPosition, wxBU_EXACTFIT | wxNO_BORDER, false, 16);
@@ -997,11 +1000,14 @@ Sidebar::Sidebar(Plater *parent)
     spoolman_import_btn->Enable(spoolman_enabled);
     bSizer39->Add(spoolman_import_btn, 0, wxALIGN_CENTER | wxLEFT, FromDIP(SidebarProps::IconSpacing()));
 
+
     ScalableButton* spoolman_btn = new ScalableButton(p->m_panel_filament_title, wxID_ANY, "spoolman_sync", wxEmptyString, wxDefaultSize,
                                                       wxDefaultPosition, wxBU_EXACTFIT | wxNO_BORDER, false, 16);
     spoolman_btn->SetToolTip(_L("Sync filaments with Spoolman"));
     spoolman_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent& e) { sync_spoolman_loaded_lanes(true); });
     p->m_bpButton_spoolman_filament = spoolman_btn;
+
+
     spoolman_btn->Show(spoolman_enabled);
     spoolman_btn->Enable(spoolman_enabled);
     bSizer39->Add(spoolman_btn, 0, wxALIGN_CENTER | wxLEFT, FromDIP(SidebarProps::IconSpacing()));
@@ -1507,8 +1513,10 @@ void Sidebar::msw_rescale()
     p->m_bpButton_add_filament->msw_rescale();
     p->m_bpButton_del_filament->msw_rescale();
     p->m_bpButton_ams_filament->msw_rescale();
+
     if (p->m_bpButton_spoolman_import)
         p->m_bpButton_spoolman_import->msw_rescale();
+
     if (p->m_bpButton_spoolman_filament)
         p->m_bpButton_spoolman_filament->msw_rescale();
     p->m_bpButton_set_filament->msw_rescale();
@@ -1582,8 +1590,10 @@ void Sidebar::sys_color_changed()
     p->m_bpButton_add_filament->msw_rescale();
     p->m_bpButton_del_filament->msw_rescale();
     p->m_bpButton_ams_filament->msw_rescale();
+
     if (p->m_bpButton_spoolman_import)
         p->m_bpButton_spoolman_import->msw_rescale();
+
     if (p->m_bpButton_spoolman_filament)
         p->m_bpButton_spoolman_filament->msw_rescale();
     p->m_bpButton_set_filament->msw_rescale();
@@ -2237,6 +2247,7 @@ void Sidebar::update_ui_from_settings()
 #if 0
     p->object_list->apply_volumes_order();
 #endif
+
     const bool spoolman_enabled = Slic3r::Spoolman::is_enabled();
     if (p->m_bpButton_spoolman_import) {
         p->m_bpButton_spoolman_import->Show(spoolman_enabled);
@@ -2248,6 +2259,7 @@ void Sidebar::update_ui_from_settings()
     }
     if (auto* sizer = p->m_panel_filament_title->GetSizer())
         sizer->Layout();
+
 }
 
 bool Sidebar::show_object_list(bool show) const
