@@ -501,6 +501,9 @@ std::string SpoolmanSpool::get_preset_name()
     if (!m_filament_ptr->material.empty())
         name += " " + m_filament_ptr->material;
 
+    if (id > 0)
+        name += " (Spool #" + std::to_string(id) + ")";
+
     return remove_special_key(name);
 }
 
