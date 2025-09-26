@@ -1847,8 +1847,10 @@ bool Sidebar::sync_spoolman_loaded_lanes(bool show_feedback)
         return false;
     }
 
-    std::map<int, DynamicPrintConfig> lane_configs;
+    auto* preset_bundle = wxGetApp().preset_bundle;
+    std::map<int, DynamicPrintConfig> lane_configs = preset_bundle->filament_ams_list;
     std::vector<std::string>          missing_presets;
+    bool                              updated_lane = false;
 
     for (const auto& [lane, spool] : lane_map) {
         if (!spool)
@@ -1894,7 +1896,8 @@ bool Sidebar::sync_spoolman_loaded_lanes(bool show_feedback)
         config.set_key_value("filament_changed", new ConfigOptionBool{true});
         config.set_key_value("filament_multi_colors", new ConfigOptionStrings{});
 
-        lane_configs.emplace(static_cast<int>(lane), std::move(config));
+        lane_configs[static_cast<int>(lane)] = std::move(config);
+        updated_lane                          = true;
     }
 
     if (!missing_presets.empty()) {
@@ -1907,7 +1910,7 @@ bool Sidebar::sync_spoolman_loaded_lanes(bool show_feedback)
         dlg.ShowModal();
     }
 
-    if (lane_configs.empty()) {
+    if (!updated_lane) {
         MessageDialog dlg(this,
             _L("Unable to map any Spoolman spools to filament presets. Please import the spools first."),
             _L("Sync filaments with Spoolman"),
@@ -1916,7 +1919,6 @@ bool Sidebar::sync_spoolman_loaded_lanes(bool show_feedback)
         return true;
     }
 
-    auto* preset_bundle = wxGetApp().preset_bundle;
     preset_bundle->filament_ams_list = lane_configs;
     p->ams_list_device               = "spoolman";
 
